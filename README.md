@@ -1,7 +1,7 @@
 # Projects
 
 ## Measure distance simple
-[link](\Measure_distance_simple)
+[link](/Measure_distance_simple)
 
 **Components:**
 - Arduino UNO
