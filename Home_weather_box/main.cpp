@@ -2,6 +2,8 @@
 #include <GyverBME280.h>
 #include <Adafruit_SSD1306.h>
 #include <Wire.h>
+#include "weather_codes.h"
+#include "forecast_data.h"
 
 
 #define EB_NO_FOR
@@ -26,7 +28,6 @@ uint8_t  display_font_size = 1; // scale
 const uint8_t  display_font_w = 6; // in pixels, 21 chars per string with scale 1
 const uint8_t  display_font_h = 8; // in pixels, 8 rows with scale 1
 bool  is_display_blinked = false;
-
 #define CURSOR_X(col) (col * display_font_w * display_font_size)
 #define CURSOR_Y(row) (row * display_font_h * display_font_size)
 
@@ -53,28 +54,9 @@ Button btn_right(8);
 // const char* temp_label = "Temperature: ";
 // const char* humid_label = "Humidity: ";
 
-struct WeatherForecast {
-  const char* date;
-  const char* day;
-  int8_t minTemp;
-  int8_t maxTemp;
-  int8_t wind;
-  const char* condition;
-};
-
-WeatherForecast forecast[8] = {
-  {"18.03", "Tue",  0,  4, 2, "Scattered clouds"},
-  {"19.03", "Wed", -1,  8, 3, "Clear Sky"},
-  {"20.03", "Thu",  0, 12, 1, "Clear Sky"},
-  {"21.03", "Fri",  2, 16, 4, "Clear Sky"},
-  {"22.03", "Sat",  6, 12, 2, "Moderate rain"},
-  {"23.03", "Sun", 10, 17, 3, "Overcast clouds"},
-  {"24.03", "Mon",  9, 16, 6, "Broken clouds"},
-  {"25.03", "Tue",  8, 15, 2, "Clear Sky"}
-};
-
 void readTempAndHumInside();
-void buttonChangeScreen();
+// void setDisplaySettings(int8_t display_scale, bool updateDisplay = true);
+void changeScreen();
 void setMainScreen();
 void blinkTimeSeparator();
 void displayUpdCurrentT(int16_t cur_t);
@@ -84,6 +66,8 @@ void displayForecast(int8_t index_begin, int8_t index_end);
 void setCO2histScreen();
 void setTempInHistScreen();
 void setHumInHistScreen();
+int freeRam();
+// void getWeatherDescription(char* buffer, uint16_t weatherCode);
 
 void setup()
 {
@@ -91,22 +75,29 @@ void setup()
   if (!bme.begin(0x76)) Serial.println("Error!");
 
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
-  display.clearDisplay();
   display.setTextColor(WHITE);
 
-  // display_font_size = 1;
-  // display.setTextSize(display_font_size);
-  // display.setCursor(0 * display_font_w * display_font_size, 0 * display_font_h * display_font_size);
-  // display.print("initializing...");
-  // display.display(); 
-  // delay(1000);
+  //setDisplaySettings(1);
+  display.clearDisplay();
+  display_font_size = 1;
+  display.setTextSize(display_font_size);
+  display.setCursor(0 * display_font_w * display_font_size, 0 * display_font_h * display_font_size);
+  display.print("initializing...");
+  display.display(); 
+  Serial.print(F("Free RAM: "));
+  Serial.println(freeRam());
+  display.clearDisplay();
 
-  for (int i = 0; i < 8; i++) {
-    Serial.print("forecast[");
-    Serial.print(i);
-    Serial.print("].date: ");
-    Serial.println(forecast[i].date);
-  }
+  // debug
+  // for (int i = 0; i < 8; i++) {
+  //   char dateStr[5];  // Increased buffer size
+  //   getDateString(dateStr, i);
+  //   Serial.print("forecast[");
+  //   Serial.print(i);
+  //   Serial.print("].date: ");
+  //   Serial.println(dateStr);
+  // }
+  // delay(1000);
 
   setMainScreen();  
 }
@@ -116,9 +107,9 @@ void loop()
   uint32_t now = millis();
 
   btn_down.tick();
-  if (btn_down.click()) buttonChangeScreen();
+  if (btn_down.click()) changeScreen();
   btn_right.tick();
-  if (btn_right.click()) Serial.println("btn_right click");
+  //if (btn_right.click()) Serial.println("btn_right click");
 
 
   // blink symbol : on Main screen
@@ -155,18 +146,13 @@ void readTempAndHumInside(){
   //   last_display_update_time = now;
   // }
 
-  if (!isnan(cur_t) && (prev_t != cur_t) && (current_screen == 0))
-  {
-    displayUpdCurrentT(cur_t);
-  }
-  if (!isnan(cur_h) && (prev_h != cur_h) && (current_screen == 0))
-  {
-    displayUpdCurrentH(cur_h);
-  }
+  if (!isnan(cur_t) && (prev_t != cur_t) && (current_screen == 0)) displayUpdCurrentT(cur_t);
+  if (!isnan(cur_h) && (prev_h != cur_h) && (current_screen == 0)) displayUpdCurrentH(cur_h);
 }
 
-void buttonChangeScreen(){
-  current_screen = (current_screen + 1) % 8; // not gt 7
+void changeScreen(){
+  const uint8_t MAX_SCREENS = 8;
+  current_screen = (current_screen + 1) % MAX_SCREENS; // not gt 8
   Serial.println(current_screen);
   switch(current_screen) {
     case 0: setMainScreen(); break;
@@ -182,8 +168,9 @@ void buttonChangeScreen(){
 
 void setMainScreen(){
   readTempAndHumInside();
-  display.clearDisplay();
 
+  //setDisplaySettings(3);
+  display.clearDisplay();
   display_font_size = 3;
   display.setTextSize(display_font_size);
   display.setCursor(CURSOR_X(0), CURSOR_Y(0));
@@ -217,6 +204,7 @@ void setMainScreen(){
 }
 
 void blinkTimeSeparator(){
+  // setDisplaySettings(3, false); WY DOESN NOT WORK HERE?!
   display_font_size = 3;
   display.setTextSize(display_font_size);
   display.setCursor(CURSOR_X(2), CURSOR_Y(0));
@@ -241,6 +229,7 @@ void displayUpdCurrentT(int16_t cur_t)
   But the display can not just "update" a char. Instead of this I draw a black rectangle to "clear" the previous value. 
   */
   // fill chars with current temperature (e.g. "+25" in "In  +25°C") with a rect to set a new value instead of
+  //display.display.setTextSize(display_font_size = 1);
   display.fillRect(5 * display_font_w * display_font_size, 4 * display_font_h * display_font_size, 3 * display_font_w * display_font_size, display_font_h * display_font_size, BLACK);
 
   display.setCursor(CURSOR_X(5), CURSOR_Y(4));
@@ -261,6 +250,8 @@ void displayUpdCurrentT(int16_t cur_t)
 void displayUpdCurrentH(int16_t cur_h)
 {
   // same logic as with temperature in displayUpdCurrentT()
+  display_font_size = 1;
+  display.setTextSize(display_font_size);
   display.fillRect(16 * display_font_w * display_font_size, 4 * display_font_h * display_font_size, 2 * display_font_w * display_font_size, display_font_h * display_font_size, BLACK);
   display.setCursor(CURSOR_X(16), CURSOR_Y(4));
   display.print(cur_h);
@@ -268,12 +259,12 @@ void displayUpdCurrentH(int16_t cur_h)
 }
 
 void setWeatherForecastScreen(){
-  //display.clearDisplay();
-  // display_font_size = 1;
-  // display.setTextSize(display_font_size);
+  //setDisplaySettings(1);
+  // display.clearDisplay();
+  // display.display.setTextSize(display_font_size = 1);
   // display.setCursor(CURSOR_X(0), CURSOR_Y(0));
   // display.print("Weather forecast");
-  // display.display();
+  //display.display();
 switch(current_screen) {
     case 1: 
       displayForecast(0, 1); 
@@ -291,21 +282,51 @@ switch(current_screen) {
 }
 
 void displayForecast(int8_t index_begin, int8_t index_end) {
+  //setDisplaySettings(1);
+  //Serial.println("displayForecast()");
   display.clearDisplay();
   display_font_size = 1;
   display.setTextSize(display_font_size);
   display.setCursor(CURSOR_X(0), CURSOR_Y(0));
   display.print("Weather forecast ");
+
+  // Temporary buffers for strings
+  char dateStr[5];
+  char dayStr[3];
+
+  getDateString(dateStr, index_begin);
+  getDayString(dayStr, index_begin);
+
+  display.setCursor(CURSOR_X(0), CURSOR_Y(1));
+  display.print(dateStr);
+  display.print(", ");
+  display.print(dayStr);
+
+  // display.setCursor(CURSOR_X(0), CURSOR_Y(2));
+  // display.print(getMinTemp(index_begin));
+  // display.print(" ... ");
+  // display.print(getMaxTemp(index_begin));
+  // display.print((char)247);
+  // display.print("C, ");
+  // display.print(getWind(index_begin));
+  // display.print(" m/s");
+  
+  // char weatherDesc[21];
+  // getWeatherDescription(weatherDesc, getConditionCode(index_begin));
+  // display.setCursor(CURSOR_X(0), CURSOR_Y(3));
+  // display.print(weatherDesc);
+  // Serial.println(weatherDesc);
+
   // display.print(index_begin);
   // display.print(" ");
   // display.print(index_end);
 
-  // display.setCursor(CURSOR_X(0), CURSOR_Y(1));
+  //display.setCursor(CURSOR_X(0), CURSOR_Y(1));
   // Serial.println(forecast[0].date);
   // Serial.println(forecast[index_begin].date);
   // Serial.print("index_begin: ");
   // Serial.println(index_begin);
-  //Serial.println(String(forecast[index_begin].date));
+  // Serial.println(String(forecast[index_begin].date));
   // Serial.print("forecast[index_begin].date: ");
   // Serial.println(forecast[index_begin].date);
   // display.print(forecast[index_begin].date);
@@ -340,6 +361,8 @@ void displayForecast(int8_t index_begin, int8_t index_end) {
 }
 
 void setCO2histScreen(){
+  //setDisplaySettings(1);
+  Serial.println("setCO2histScreen()");
   display.clearDisplay();
   display_font_size = 1;
   display.setTextSize(display_font_size);
@@ -349,6 +372,8 @@ void setCO2histScreen(){
 }
 
 void setTempInHistScreen(){
+  //setDisplaySettings(1);
+  Serial.println("setTempInHistScreen()");
   display.clearDisplay();
   display_font_size = 1;
   display.setTextSize(display_font_size);
@@ -358,6 +383,8 @@ void setTempInHistScreen(){
 }
 
 void setHumInHistScreen(){
+  //setDisplaySettings(1);
+  Serial.println("setHumInHistScreen()");
   display.clearDisplay();
   display_font_size = 1;
   display.setTextSize(display_font_size);
@@ -365,6 +392,40 @@ void setHumInHistScreen(){
   display.print("Hum. in hist");
   display.display();
 }
+
+// void setDisplaySettings(int8_t display_scale, bool updateDisplay){
+//   if (updateDisplay) display.clearDisplay();
+//   display.setTextSize(display_scale);
+// }
+
+// Function to check available RAM
+int freeRam() {
+  extern int __heap_start, *__brkval;
+  int v;
+  return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval);
+}
+
+// Function to get the description for a given weather code
+// void getWeatherDescription(char* buffer, uint16_t weatherCode) {
+//   if (!buffer) return;
+//   // Default to "Unknown" if code not found
+//   strcpy_P(buffer, code_900);
+  
+//   for (int i = 0; i < weatherCodeCount; i++) {
+//     WeatherCodeMap map;
+//     memcpy_P(&map, &weatherCodeMap[i], sizeof(WeatherCodeMap));
+    
+//     if (map.code == weatherCode) {
+//       strcpy_P(buffer, (char*)map.description);
+//       return;
+//     }
+//   }
+// }
+
+
+
+
+
 
 
 /*
