@@ -47,67 +47,71 @@ const char code_804[] PROGMEM = "Overcast Clouds";
 const char code_900[] PROGMEM = "Unknown";
 
 // Structure to map weather codes to their descriptions
-struct WeatherCodeMap {
+struct WeatherCodeMap
+{
   uint16_t code;
-  const char* description;
+  const char *description;
 };
 
 // Table mapping codes to descriptions, stored in PROGMEM
 const WeatherCodeMap weatherCodeMap[] PROGMEM = {
-  {200, code_200},
-  {201, code_201},
-  {202, code_202},
-  {230, code_230},
-  {231, code_231},
-  {232, code_232},
-  {233, code_233},
-  {300, code_300},
-  {301, code_301},
-  {302, code_302},
-  {500, code_500},
-  {501, code_501},
-  {502, code_502},
-  {511, code_511},
-  {520, code_520},
-  {521, code_521},
-  {522, code_522},
-  {600, code_600},
-  {601, code_601},
-  {602, code_602},
-  {610, code_610},
-  {611, code_611},
-  {612, code_612},
-  {621, code_621},
-  {622, code_622},
-  {623, code_623},
-  {700, code_700},
-  {711, code_711},
-  {721, code_721},
-  {731, code_731},
-  {741, code_741},
-  {751, code_751},
-  {800, code_800},
-  {801, code_801},
-  {802, code_802},
-  {803, code_803},
-  {804, code_804},
-  {900, code_900}
-};
+    {200, code_200},
+    {201, code_201},
+    {202, code_202},
+    {230, code_230},
+    {231, code_231},
+    {232, code_232},
+    {233, code_233},
+    {300, code_300},
+    {301, code_301},
+    {302, code_302},
+    {500, code_500},
+    {501, code_501},
+    {502, code_502},
+    {511, code_511},
+    {520, code_520},
+    {521, code_521},
+    {522, code_522},
+    {600, code_600},
+    {601, code_601},
+    {602, code_602},
+    {610, code_610},
+    {611, code_611},
+    {612, code_612},
+    {621, code_621},
+    {622, code_622},
+    {623, code_623},
+    {700, code_700},
+    {711, code_711},
+    {721, code_721},
+    {731, code_731},
+    {741, code_741},
+    {751, code_751},
+    {800, code_800},
+    {801, code_801},
+    {802, code_802},
+    {803, code_803},
+    {804, code_804},
+    {900, code_900}};
 
 const int weatherCodeCount = sizeof(weatherCodeMap) / sizeof(WeatherCodeMap);
 
 // Function to get the description for a given weather code
-inline void getWeatherDescription(char* buffer, uint16_t weatherCode) {
-  if (!buffer) return;
+inline void getWeatherDescription(char *buffer, uint16_t weatherCode)
+{
+  if (!buffer)
+    return;
   // Default to "Unknown" if code not found
   strcpy_P(buffer, code_900);
-  
-  for (int i = 0; i < weatherCodeCount; i++) {
+
+  for (int i = 0; i < weatherCodeCount; i++)
+  {
     WeatherCodeMap map;
     memcpy_P(&map, &weatherCodeMap[i], sizeof(WeatherCodeMap));
-    
-    if (map.code == weatherCode) {
-      strcpy_P(buffer, (char*)map.description);
+
+    if (map.code == weatherCode)
+    {
+      strcpy_P(buffer, (char *)map.description);
       return;
     }
   }
@@ -118,7 +122,7 @@ inline void getWeatherDescription(char* buffer, uint16_t weatherCode) {
 //   // Get the full description first
 //   char fullDesc[30];
 //   getWeatherDescription(fullDesc, weatherCode);
-  
+
 //   // Shorten common words
 //   if (strstr_P(fullDesc, PSTR("Thunderstorm"))) {
 //     strcpy(buffer, "T-Storm");
