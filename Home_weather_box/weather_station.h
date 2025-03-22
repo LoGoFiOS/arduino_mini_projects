@@ -4,7 +4,7 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <GyverBME280.h>
-#include <Adafruit_SSD1306.h>
+#include <GyverOLED.h>
 
 // Button definitions using EncButton library
 #define EB_NO_FOR
@@ -27,7 +27,7 @@
 
 // Global objects
 extern GyverBME280 bme;
-extern uint8_t current_screen;
+extern int8_t current_screen;
 
 // Function to read temperature and humidity from BME280
 inline void readTempAndHumInside()

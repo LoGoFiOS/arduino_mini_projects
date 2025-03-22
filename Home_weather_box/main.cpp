@@ -8,12 +8,13 @@
  */
 
 #include <Arduino.h>
-#include <avr/wdt.h>
+// #include <avr/wdt.h>
 #include "weather_station.h"
+#include <GyverOLED.h>
+GyverOLED<SSD1306_128x64, OLED_NO_BUFFER> display;
 
 // Global objects initialization
 GyverBME280 bme;
-Adafruit_SSD1306 display = Adafruit_SSD1306(128, 64, &Wire);
 Button btn_down(2);
 Button btn_right(8);
 
@@ -22,23 +23,21 @@ uint32_t last_sensor_read_time = 0;
 uint32_t last_display_blink_time = 0;
 #define DISPLAY_TIME_BLINK_INTERVAL 1000
 #define SENSOR_READ_INTERVAL 5000
-// constexpr uint32_t DISPLAY_TIME_BLINK_INTERVAL = 1000;
-// constexpr uint32_t SENSOR_READ_INTERVAL = 5000;
 
 // display
-uint8_t current_screen = 0;
-uint8_t display_font_size = 1;
+int8_t current_screen = 0;
+int8_t display_font_size = 1;
 uint8_t cur_t = 0;
 uint8_t cur_h = 0;
 bool is_display_blinked = false;
 
 void setup()
 {
-  wdt_disable(); // Disable watchdog on startup
-  Serial.println("System starting");
-  Serial.print("Reset reason: ");
-  Serial.println(MCUSR);
-  MCUSR = 0; // Clear reset flags
+  // wdt_disable(); // Disable watchdog on startup
+  // Serial.println("System starting");
+  // Serial.print("Reset reason: ");
+  // Serial.println(MCUSR);
+  // MCUSR = 0; // Clear reset flags
   Serial.begin(9600);
   if (!bme.begin(0x76))
     Serial.println("BME280 Error!");
@@ -47,29 +46,16 @@ void setup()
   Serial.println(freeRam());
   delay(500);
 
-  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
-  display.setTextColor(WHITE);
-
-  display.clearDisplay();
+  display.init();
+  display.clear();
   display_font_size = 1;
-  display.setTextSize(display_font_size);
-  display.setCursor(CURSOR_X(0), CURSOR_Y(0));
+  display.setScale(display_font_size);
+  display.setCursorXY(CURSOR_X(0), CURSOR_Y(0));
   display.print("initializing...");
-  display.display();
+  display.update();
   delay(500);
-  display.clearDisplay();
-
-  // Debug - print forecast data
-  //  for (int i = 0; i < 8; i++) {
-  //    char dateStr[5];
-  //    getDateString(dateStr, i);
-  //    Serial.print(F("forecast["));
-  //    Serial.print(i);
-  //    Serial.print(F("].date: "));
-  //    Serial.println(dateStr);
-  //  }
-  //  delay(1000);
-
+  display.clear();
+  
   setMainScreen();
 }
 
@@ -134,13 +120,13 @@ TODO
 // LCD
 // lcd.init();
 // lcd.backlight();
-// lcd.setCursor(0, 0);
+// lcd.setCursorXY(0, 0);
 // lcd.clear();
 // lcd.print("Init sensors...");
 // delay(1000);
 // lcd.clear();
 // lcd.print("Temp. & humid.");
-// lcd.setCursor(0, 1);
+// lcd.setCursorXY(0, 1);
 // lcd.print("[v.0.1]");
 // delay(1000);
 // lcd.clear();
