@@ -50,11 +50,11 @@ inline void readTempAndHumInside()
 }
 
 // Function to check available RAM
-inline int freeRam()
-{
-  extern int __heap_start, *__brkval;
-  int v;
-  return (int)&v - (__brkval == 0 ? (int)&__heap_start : (int)__brkval);
-}
+// inline int freeRam()
+// {
+//   extern int __heap_start, *__brkval;
+//   int v;
+//   return (int)&v - (__brkval == 0 ? (int)&__heap_start : (int)__brkval);
+// }
 
 #endif // WEATHER_STATION_H

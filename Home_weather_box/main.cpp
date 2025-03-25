@@ -10,6 +10,7 @@
 #include <Arduino.h>
 // #include <avr/wdt.h>
 #include "weather_station.h"
+// #include "history_data.h"
 #include <GyverOLED.h>
 GyverOLED<SSD1306_128x64, OLED_NO_BUFFER> display;
 
@@ -31,6 +32,9 @@ uint8_t cur_t = 0;
 uint8_t cur_h = 0;
 bool is_display_blinked = false;
 
+//history data
+//extern uint16_t co2Buffer;
+
 void setup()
 {
   // wdt_disable(); // Disable watchdog on startup
@@ -38,12 +42,13 @@ void setup()
   // Serial.print("Reset reason: ");
   // Serial.println(MCUSR);
   // MCUSR = 0; // Clear reset flags
+  randomSeed(analogRead(A0));
   Serial.begin(9600);
   if (!bme.begin(0x76))
     Serial.println("BME280 Error!");
 
-  Serial.print(F("Free RAM: "));
-  Serial.println(freeRam());
+  // Serial.print(F("Free RAM: "));
+  // Serial.println(freeRam());
   delay(500);
 
   display.init();
@@ -55,30 +60,50 @@ void setup()
   display.update();
   delay(500);
   display.clear();
-  
+
   setMainScreen();
+  // display.clear(); // tmp!!!
+  // current_screen = 5;
+  // setCO2histScreen();
 }
 
 void loop()
 {
   uint32_t now = millis();
 
-  static uint32_t last_ram_check = 0;
-  if (millis() - last_ram_check > 1000)
-  {
-    last_ram_check = millis();
-    Serial.print("Free RAM: ");
-    Serial.println(freeRam());
-  }
+  // debug
+  // static uint32_t last_ram_check = 0;
+  // if (millis() - last_ram_check > 1000)
+  // {
+  //   last_ram_check = millis();
+  //   Serial.print("Free RAM: ");
+  //   Serial.println(freeRam());
+  // }
 
   // Handle button inputs
+  // debug
   btn_down.tick();
   if (btn_down.click())
     changeScreen();
 
   btn_right.tick();
-  if (btn_right.click())
-    Serial.println("btn_right click");
+  if (btn_right.click()) {
+    switch (current_screen)
+    {
+    case 5:
+      CO2genRandomValue();
+      //drawHistoryGraph(getCO2_HoursAgo, 400, 2000);
+      drawCO2Graph(2000, 400);
+      setCO2histScreen();
+      break;
+    case 6:
+      TempInGenRandomValue();
+      //drawHistoryGraph(getTempIn_HoursAgo, -10, 30);
+      drawTempInGraph(30, -10);
+      setTempInHistScreen();     
+      break;
+    }
+  }
 
   // Blink time colon on main screen
   if ((current_screen == 0) && (now - last_display_blink_time >= DISPLAY_TIME_BLINK_INTERVAL))
