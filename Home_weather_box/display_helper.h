@@ -7,37 +7,43 @@
 #include "weather_codes.h"
 #include "forecast_data.h"
 #include "history_data.h"
-// #include "graph_helper.h"
 
 // Display related constants and macros
 #define CURSOR_X(col) (col * display_font_w * display_font_size) // get first left-top X coor of col, pixels 0 - 127!!!
 #define CURSOR_Y(row) (row * display_font_h * display_font_size) // get first left-top X coor of row
 
 // Display settings
-extern int8_t current_screen;
-extern int8_t display_font_size;
-const int8_t display_font_w = 6;
-const int8_t display_font_h = 8;
 extern GyverOLED<SSD1306_128x64, OLED_NO_BUFFER> display;
+extern uint8_t current_screen;
+extern uint8_t display_font_size;
+const uint8_t display_font_w = 6;
+const uint8_t display_font_h = 8;
 
 // Current sensor values
-extern uint8_t cur_t;
-extern uint8_t cur_h;
+extern int8_t cur_t;
+extern int8_t cur_h;
+extern int16_t cur_co2;
 extern bool is_display_blinked;
 
 extern uint8_t uint8_tHIST_DATA_BUFFER_SIZE;
 
 // Function declarations for display handling
 void changeScreen();
+
 void setMainScreen();
 void blinkTimeSeparator();
-void displayUpdCurrentT(int16_t cur_t);
-void displayUpdCurrentH(int16_t cur_h);
+void displayUpdCurrentT(int8_t cur_t);
+void displayUpdCurrentH(int8_t cur_h);
+void displayUpdCurrentCO2(int16_t cur_co2);
+
 void setWeatherForecastScreen(int8_t forecast_id);
-void drawCO2Graph(uint16_t max_value, uint16_t min_value);
+
+// void setGraph(int16_t max_value, int16_t min_value, int16_t step, int8_t graph_shift = -4);
+// void drawHistoryGraph(int16_t (*getValueAt)(uint8_t), int16_t max_value, int16_t min_value);
 void setCO2histScreen();
 void setTempInHistScreen();
 void setHumInHistScreen();
+// void testSetCO2();
 
 // Set main screen with clock, date, and current conditions
 inline void setMainScreen()
@@ -69,11 +75,12 @@ inline void setMainScreen()
   display.print("C");
   display.print(", 2 m/s");
 
-  display.setCursorXY(CURSOR_X(1), CURSOR_Y(6) + 8);
-  display.print("Few Clouds");
+  // display.setCursorXY(CURSOR_X(1), CURSOR_Y(6) + 8);
+  // display.print("Few Clouds");
   display.update();
   displayUpdCurrentT(cur_t);
   displayUpdCurrentH(cur_h);
+  displayUpdCurrentCO2(cur_co2);
 }
 
 // Blink time separator (colon) function
@@ -97,8 +104,7 @@ inline void blinkTimeSeparator()
   display.setScale(display_font_size);
 }
 
-// Update current temperature display
-inline void displayUpdCurrentT(int16_t cur_t)
+inline void displayUpdCurrentT(int8_t cur_t)
 {
   /*
   Format for temperature inside is "In  +25°C"
@@ -123,12 +129,18 @@ inline void displayUpdCurrentT(int16_t cur_t)
   display.update();
 }
 
-// Update current humidity display
-inline void displayUpdCurrentH(int16_t cur_h)
+inline void displayUpdCurrentH(int8_t cur_h)
 {
   // same logic as with temperature in displayUpdCurrentT()
   display.setCursorXY(CURSOR_X(16), CURSOR_Y(4));
   display.print(cur_h);
+  display.update();
+}
+
+inline void displayUpdCurrentCO2(int16_t cur_co2)
+{
+  display.setCursorXY(CURSOR_X(1), CURSOR_Y(6)+8);
+  display.print(cur_co2);
   display.update();
 }
 
@@ -202,58 +214,7 @@ inline void setWeatherForecastScreen(int8_t forecast_id)
   display.update();
 }
 
-// inline void drawHistoryGraph(
-//   uint16_t (*getValueAt)(uint8_t),
-//   int16_t minVal,
-//   int16_t maxVal,
-//   uint8_t barWidth = 3
-// ) {
-//   for (int i = 0; i < HIST_DATA_BUFFER_SIZE; i++) {
-//       int16_t val = getValueAt(i);
-//       int8_t y = (val >= minVal && val <= maxVal)
-//                  ? map(val, minVal, maxVal, 59, 11)
-//                  : 65;
-//       //uint8_t x1 = CURSOR_X(5) + barWidth * i;
-//       //display.rect(x1, y, x1 + barWidth - 1, 59, OLED_FILL);
-//       display.rect(CURSOR_X(5) + barWidth*i, y, CURSOR_X(5) + barWidth*(i+1)-1, 59, OLED_FILL);
-//   }
-// }
-
-inline void drawCO2Graph(uint16_t max_value, uint16_t min_value){
-  /*
-    The greatest point on the graph: 11px. Max value: 2000
-    The lowest: 59px. Min value: 400
-
-    Each hour on the graph has 4px length by x. 
-    The y pos must by calculated. 
-  */
-
-  display.rect(CURSOR_X(5), CURSOR_Y(1), CURSOR_X(17), CURSOR_Y(8), OLED_CLEAR);
-
-  for (int i = 0; i < HIST_DATA_BUFFER_SIZE; i++) {
-    uint16_t co2 = getCO2_HoursAgo(i);
-    uint8_t y_coor;
-    if ((co2 >= min_value) && (co2 <= max_value)) {
-      y_coor = map(co2, min_value, max_value, 59, 11);
-    } else {
-      y_coor = 65;
-    }
-
-    display.rect(CURSOR_X(5) + 3*i, y_coor, CURSOR_X(5) + 3*(i+1)-1, 59, OLED_FILL);
-    //display.fastLineH(y_coor, CURSOR_X(5) + 3*i, CURSOR_X(5) + 3*(i+1)-1);    
-  }
-}
-
-// Set CO2 history screen
-inline void setCO2histScreen()
-{
-  display.setCursorXY(CURSOR_X(6), CURSOR_Y(0));
-  display.print("CO2 in. 24h");
-
-  uint16_t max_value = 2000;
-  uint16_t min_value = 400;
-  int16_t step = 400;
-  int8_t graph_shift = -4;
+inline void setGraph(int16_t max_value, int16_t min_value, int16_t step, int8_t graph_shift = -4){
   for (int i = 0; i <= 4; i += 1) {
     display.setCursorXY(CURSOR_X(0), CURSOR_Y(1) + (display_font_h + 4) * i + graph_shift); // 4px - distance between rows
     display.print(max_value - step*i);
@@ -262,9 +223,59 @@ inline void setCO2histScreen()
     //Serial.println(CURSOR_Y(1) + (display_font_h + 4) * i + display_font_h - 1 + graph_shift);
   }
   display.fastLineV(CURSOR_X(4) + display_font_w/2, CURSOR_Y(1), CURSOR_Y(8));
-  
-  drawCO2Graph(max_value, min_value);
-  //drawHistoryGraph(getCO2_HoursAgo, min_value, max_value);
+  display.update();
+}
+
+inline void drawHistoryGraph(
+    int16_t (*getValueAt)(uint8_t),
+    int16_t max_value,
+    int16_t min_value
+)
+{
+  /*
+    The greatest point on the graph: 11px. Max value: 
+    The lowest: 59px. Min value: 
+
+    Each hour on the graph has 4px length by x. 
+    The y pos must by calculated. 
+  */
+  //Serial.print("max_value: "); Serial.print(max_value); Serial.print("min_value: "); Serial.println(min_value);  
+  // clear display
+  display.rect(CURSOR_X(5), CURSOR_Y(1), CURSOR_X(17), CURSOR_Y(8), OLED_CLEAR);
+
+  uint8_t barWidth = 3;
+
+  for (int i = 0; i < HIST_DATA_BUFFER_SIZE; i++) {
+    int16_t val = getValueAt(i);
+    //Serial.print("Data from buffer: "); Serial.println(val);
+    uint8_t y_coor;
+    if ((val >= min_value) && (val <= max_value)) {
+      y_coor = map(val, min_value, max_value, 59, 11);
+      // a few option to show data
+      display.rect(CURSOR_X(5) + barWidth*i, y_coor, CURSOR_X(5) + barWidth*(i+1)-1, 59, OLED_FILL);
+      //display.fastLineH(y_coor, CURSOR_X(5) + 3*i, CURSOR_X(5) + 3*(i+1)-1);
+      //Serial.print(" pos y: "); Serial.println(y_coor);
+    } else {
+      //y_coor = 65;
+      // TODO: show somehow data missing 
+    }
+
+    
+    
+     
+  }
+  display.update();
+}
+
+inline void setCO2histScreen()
+{
+  display.setCursorXY(CURSOR_X(6), CURSOR_Y(0));
+  display.print("CO2 in. 24h");
+  setGraph(2000, 400, 400);
+  drawHistoryGraph(getCO2_HoursAgo, 2000, 400);
+
+
+  //drawHistoryGraph(getCO2_HoursAgo, min_valueue, max_valueue);
   // debug. Check pixel perfect titels
   //display.rect(CURSOR_X(0), CURSOR_Y(1), CURSOR_X(4) - 1, CURSOR_Y(2) - 1);
 
@@ -284,32 +295,6 @@ inline void setCO2histScreen()
   // display.print("min:");
   // display.setCursorXY(CURSOR_X(17), CURSOR_Y(6)+8);
   // display.print("850");
-  display.update();
-}
-
-inline void drawTempInGraph(int8_t max_value, int8_t min_value){
-  /*
-    The greatest point on the graph: 11px. Max value: 30
-    The lowest: 59px. Min value: 0
-
-    Each hour on the graph has 4px length by x. 
-    The y pos must by calculated. 
-  */
-
-  display.rect(CURSOR_X(5), CURSOR_Y(1), CURSOR_X(17), CURSOR_Y(8), OLED_CLEAR);
-
-  for (int i = 0; i < HIST_DATA_BUFFER_SIZE; i++) {
-    int16_t temp = getTempIn_HoursAgo(i);
-    int8_t y_coor;
-    if ((temp >= min_value) && (temp <= max_value)) {
-      y_coor = map(temp, min_value, max_value, 59, 11);
-    } else {
-      y_coor = 65;
-    }
-
-    display.rect(CURSOR_X(5) + 3*i, y_coor, CURSOR_X(5) + 3*(i+1)-1, 59, OLED_FILL);
-    //display.fastLineH(y_coor, CURSOR_X(5) + 3*i, CURSOR_X(5) + 3*(i+1)-1);    
-  }
 }
 
 // Set temperature history screen
@@ -317,30 +302,69 @@ inline void setTempInHistScreen()
 {
   display.setCursorXY(CURSOR_X(6), CURSOR_Y(0));
   display.print("Temp in. 24h");
-
-  int16_t max_value = 30;
-  int16_t min_value = -10;
-  int16_t step = 10;
-  int8_t graph_shift = -4;
-  for (int i = 0; i <= 4; i += 1) {
-    display.setCursorXY(CURSOR_X(0), CURSOR_Y(1) + (display_font_h + 4) * i + graph_shift); // 4px - distance between rows
-    display.print(max_value - step*i);
-    display.fastLineH(CURSOR_Y(1) + (display_font_h + 4) * i + display_font_h - 1 + graph_shift, CURSOR_X(4) + 1, CURSOR_X(5) - 1);
-    // 11 23 35 47 59
-    //Serial.println(CURSOR_Y(1) + (display_font_h + 4) * i + display_font_h - 1 + graph_shift);
-  }
-  display.fastLineV(CURSOR_X(4) + display_font_w/2, CURSOR_Y(1), CURSOR_Y(8));
-  
-  //drawHistoryGraph(getTempIn_HoursAgo, min_value, max_value);
-  drawTempInGraph(max_value, min_value);  
+  setGraph(30, -10, 10);
+  drawHistoryGraph(getTempIn_HoursAgo, 30, -10); 
 }
 
 // Set humidity history screen
 inline void setHumInHistScreen()
 {
-  display.setCursorXY(CURSOR_X(0), CURSOR_Y(0));
+  display.setCursorXY(CURSOR_X(6), CURSOR_Y(0));
   display.print("Hum. in. 24h");
+  setGraph(100, 0, 25);
+  drawHistoryGraph(getHumIn_HoursAgo, 100, 0);
   display.update();
 }
 
+
 #endif // DISPLAY_HELPER_H
+
+
+
+
+// inline void drawTempInGraph(int8_t max_valueue, int8_t min_valueue){
+//   /*
+//     The greatest point on the graph: 11px. Max value: 30
+//     The lowest: 59px. Min value: 0
+
+//     Each hour on the graph has 4px length by x. 
+//     The y pos must by calculated. 
+//   */
+
+//   // display.rect(CURSOR_X(5), CURSOR_Y(1), CURSOR_X(17), CURSOR_Y(8), OLED_CLEAR);
+
+//   for (int i = 0; i < HIST_DATA_BUFFER_SIZE; i++) {
+//     int16_t temp = getTempIn_HoursAgo(i);
+//     int8_t y_coor;
+//     if ((temp >= min_valueue) && (temp <= max_valueue)) {
+//       y_coor = map(temp, min_valueue, max_valueue, 59, 11);
+//     } else {
+//       y_coor = 65;
+//     }
+
+//     display.rect(CURSOR_X(5) + 3*i, y_coor, CURSOR_X(5) + 3*(i+1)-1, 59, OLED_FILL);
+//     //display.fastLineH(y_coor, CURSOR_X(5) + 3*i, CURSOR_X(5) + 3*(i+1)-1);    
+//   }
+// }
+
+
+// void testSetCO2()
+// {
+//   display.setCursorXY(CURSOR_X(0), CURSOR_Y(7));
+//   display.print("CO2: ");
+//   display.print(cur_co2ppm);
+//   display.update(); 
+//   Serial.print("co2: ");
+//   Serial.println(cur_co2ppm);
+// }
+
+
+  //   for (int i = 0; i < HIST_DATA_BUFFER_SIZE; i++) {
+  //     int16_t val = getValueAt(i);
+  //     int8_t y = (val >= min_value && val <= max_value)
+  //                ? map(val, min_value, max_value, 59, 11)
+  //                : 65;
+  //     //uint8_t x1 = CURSOR_X(5) + barWidth * i;
+  //     //display.rect(x1, y, x1 + barWidth - 1, 59, OLED_FILL);
+  //     display.rect(CURSOR_X(5) + barWidth*i, y, CURSOR_X(5) + barWidth*(i+1)-1, 59, OLED_FILL);
+  // }

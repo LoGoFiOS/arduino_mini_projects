@@ -5,6 +5,7 @@
 #include <Wire.h>
 #include <GyverBME280.h>
 #include <GyverOLED.h>
+#include <MHZ19_uart.h>
 
 // Button definitions using EncButton library
 #define EB_NO_FOR
@@ -17,36 +18,47 @@
 #define EB_STEP_TIME 200  // Pulse hold timeout
 #include <EncButton.h>
 
+// Project files
 #include "weather_codes.h"
 #include "forecast_data.h"
 #include "display_helper.h"
 
-// Pin definitions
-#define SCL A5
-#define SDA A4
-
 // Global objects
 extern GyverBME280 bme;
-extern int8_t current_screen;
+extern uint8_t current_screen;
+extern MHZ19_uart mhz19;
+
+int8_t cur_t = 0;
+int8_t cur_h = 0;
+int16_t cur_co2 = 0;
+bool is_display_blinked = false;
 
 // Function to read temperature and humidity from BME280
 inline void readTempAndHumInside()
 {
-  static uint8_t prev_t = 0;
-  static uint8_t prev_h = 0;
-  // Read BME280 - Temperature
-  prev_t = cur_t;
-  cur_t = (int16_t)round(bme.readTemperature());
+  static int8_t prev_t = cur_t;
+  cur_t = (int8_t)round(bme.readTemperature());
+  addTempIn(cur_t);
 
-  // Read BME280 - Humidity
-  prev_h = cur_h;
-  cur_h = (int16_t)round(bme.readHumidity());
+  static int8_t prev_h = cur_h;
+  cur_h = (int8_t)round(bme.readHumidity());
+  addHumIn(cur_h);
 
-  // Update display if values changed and on main screen
+  // Update display if values changed
   if (!isnan(cur_t) && (prev_t != cur_t) && (current_screen == 0))
     displayUpdCurrentT(cur_t);
   if (!isnan(cur_h) && (prev_h != cur_h) && (current_screen == 0))
     displayUpdCurrentH(cur_h);
+}
+
+inline void readCO2(){
+  static int16_t prev_co2 = cur_co2;
+  cur_co2 = mhz19.getCO2PPM(); // values 400...5000
+  addCO2(cur_co2);
+  if (!isnan(cur_co2) && (cur_co2 != prev_co2) && (current_screen == 0)){
+    displayUpdCurrentCO2(cur_co2);
+  }
+    //displayUpdCurrentH(cur_h);
 }
 
 // Function to check available RAM

@@ -49,7 +49,7 @@ const char code_900[] PROGMEM = "Unknown";
 // Structure to map weather codes to their descriptions
 struct WeatherCodeMap
 {
-  uint16_t code;
+  int16_t code;
   const char *description;
 };
 
@@ -97,7 +97,7 @@ const WeatherCodeMap weatherCodeMap[] PROGMEM = {
 const int weatherCodeCount = sizeof(weatherCodeMap) / sizeof(WeatherCodeMap);
 
 // Function to get the description for a given weather code
-inline void getWeatherDescription(char *buffer, uint16_t weatherCode)
+inline void getWeatherDescription(char *buffer, int16_t weatherCode)
 {
   if (!buffer)
     return;
@@ -118,7 +118,7 @@ inline void getWeatherDescription(char *buffer, uint16_t weatherCode)
 }
 
 // For shorter descriptions, use this version (saves display space)
-// inline void getWeatherDescriptionShort(char* buffer, uint16_t weatherCode) {
+// inline void getWeatherDescriptionShort(char* buffer, int16_t weatherCode) {
 //   // Get the full description first
 //   char fullDesc[30];
 //   getWeatherDescription(fullDesc, weatherCode);

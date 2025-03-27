@@ -16,7 +16,7 @@ struct WeatherForecast
   int8_t minTemp;
   int8_t maxTemp;
   int8_t wind;
-  uint16_t weatherCode;
+  int16_t weatherCode;
 };
 
 // Sample forecast data stored in PROGMEM
@@ -44,6 +44,8 @@ inline void getWeekDay(char* buffer, uint8_t index) {
   }
   strcpy_P(buffer, weekDays[index]);
 }
+
+// insted of these func I call getForecast and get access to it's values
 
 // Helper functions to get data from PROGMEM forecast
 // inline void getDateString(char *buffer, uint8_t index)
@@ -85,7 +87,7 @@ inline void getWeekDay(char* buffer, uint8_t index) {
 //   return f.wind;
 // }
 
-// inline uint16_t getConditionCode(uint8_t index)
+// inline int16_t getConditionCode(uint8_t index)
 // {
 //   WeatherForecast f;
 //   memcpy_P(&f, &forecast[index], sizeof(WeatherForecast));
